@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Reaction Trainer Pro</title>
+  <meta name="theme-color" content="#111" />
+  <style>
+    :root{
+      --bg:#0b0b0b;--fg:#ffffff;--muted:#bfbfbf;--accent:#e11d48;--card:#161616;--ok:#22c55e;--warn:#f59e0b;--bad:#ef4444;
+    }
+    [data-theme="light"]{
+      --bg:#f7f7f7;--fg:#0b0b0b;--muted:#333;--accent:#d00036;--card:#ffffff;--ok:#16a34a;--warn:#b45309;--bad:#dc2626;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0;background:var(--bg);color:var(--fg);font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Noto Sans",Tahoma,Arial;
+      display:flex;flex-direction:column;gap:12px;align-items:center;min-height:100%;
+    }
+    header{width:100%;max-width:1100px;padding:12px 16px;display:flex;gap:12px;align-items:center;justify-content:space-between}
+    .brand{display:flex;gap:10px;align-items:center;font-weight:800}
+    .brand .dot{width:12px;height:12px;background:var(--accent);border-radius:50%;box-shadow:0 0 20px var(--accent)}
+    main{width:100%;max-width:1100px;padding:8px 16px;display:grid;grid-template-columns:1.2fr 1fr;gap:16px}
+    @media (max-width:900px){main{grid-template-columns:1fr}}
+
+    .card{background:var(--card);border:1px solid #00000030;border-radius:18px;box-shadow:0 6px 20px #00000030;padding:14px}
+    .card h2{margin:2px 0 10px 0;font-size:18px}
+    .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+    label{font-size:14px;color:var(--muted)}
+    input,select{background:#00000040;color:var(--fg);border:1px solid #00000060;border-radius:12px;padding:10px 12px;font-size:14px}
+    input[type="range"]{width:180px}
+    .btn{background:var(--accent);color:white;border:none;border-radius:14px;padding:12px 16px;cursor:pointer;font-weight:700;box-shadow:0 6px 18px #e11d4880;transition:transform .08s ease,opacity .2s}
+    .btn:active{transform:scale(.98)}
+    .btn.secondary{background:#252525;box-shadow:none;border:1px solid #ffffff1a;color:var(--fg)}
+    .btn.ghost{background:transparent;border:1px dashed #ffffff30;color:var(--fg)}
+    .muted{color:var(--muted)}
+    .big{font-size:40px;font-weight:900}
+    .panel{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+    @media (max-width:700px){.panel{grid-template-columns:1fr}}
+
+    .playfield{height:280px;border-radius:18px;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden}
+    .flash{background:#ffffff !important;color:#000}
+    .cueLabel{position:absolute;inset:auto 0 14px 0;text-align:center;font-size:22px;font-weight:800;opacity:.92}
+    .counter{display:flex;gap:16px;align-items:center;justify-content:center}
+    .pill{padding:6px 10px;border-radius:999px;background:#ffffff14;border:1px solid #ffffff22}
+    progress{width:100%;height:14px;border-radius:10px}
+
+    .grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+    .grid-2{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+    .stat{background:#00000030;border:1px solid #ffffff1a;border-radius:14px;padding:12px}
+    .stat .v{font-weight:900;font-size:20px}
+
+    footer{opacity:.7;padding:20px}
+    .hidden{display:none !important}
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand"><span class="dot"></span> Reaction Trainer Pro</div>
+    <div class="row">
+      <button class="btn secondary" id="themeBtn">🌗 Theme</button>
+      <button class="btn secondary" id="langBtn">🌐 Language</button>
+      <button class="btn ghost" id="fsBtn">⛶ Fullscreen</button>
+    </div>
+  </header>
+
+  <main>
+    <!-- Left: Play Area & Session Controls -->
+    <section class="card">
+      <h2>Play Area</h2>
+      <div id="playfield" class="playfield" style="background:#121212">
+        <div id="timeLeft" class="big">00:30</div>
+        <div id="cueLabel" class="cueLabel muted">— Ready —</div>
+      </div>
+
+      <div class="counter" style="margin-top:12px">
+        <span class="pill">Signals: <b id="signalsCount">0</b></span>
+        <span class="pill">Hits: <b id="hitsCount">0</b></span>
+        <span class="pill">Misses: <b id="missCount">0</b></span>
+        <span class="pill">Avg: <b id="avgRt">—</b> ms</span>
+      </div>
+
+      <div class="row" style="margin:12px 0 6px 0;justify-content:center">
+        <button class="btn" id="startBtn">▶️ Start</button>
+        <button class="btn secondary" id="pauseBtn" disabled>⏸️ Pause</button>
+        <button class="btn secondary" id="stopBtn" disabled>⏹️ Stop</button>
+        <button class="btn" id="reactBtn" title="Press when you hear the cue">⚡ React</button>
+      </div>
+
+      <progress id="sessionProgress" max="1" value="0"></progress>
+    </section>
+
+    <!-- Right: Settings -->
+    <aside class="card">
+      <h2>Settings</h2>
+      <div class="panel">
+        <div>
+          <label>Mode</label>
+          <select id="mode">
+            <option value="custom">Custom</option>
+            <option value="beginner">Beginner (Safe)</option>
+            <option value="intermediate">Intermediate</option>
+            <option value="advanced">Advanced</option>
+            <option value="endless">Endless</option>
+            <option value="challenge">Speed Challenge (1 minute)</option>
+          </select>
+        </div>
+        <div>
+          <label>Session Duration (s)</label>
+          <input id="duration" type="number" min="5" max="1800" value="60" />
+        </div>
+        <div>
+          <label>Min Delay (s)</label>
+          <input id="minDelay" type="number" step="0.1" min="0.2" value="0.5" />
+        </div>
+        <div>
+          <label>Max Delay (s)</label>
+          <input id="maxDelay" type="number" step="0.1" min="0.5" value="3" />
+        </div>
+        <div>
+          <label>Speed Ramp</label>
+          <select id="ramp">
+            <option value="none">None</option>
+            <option value="mild">Mild</option>
+            <option value="steep">Steep</option>
+          </select>
+        </div>
+        <div>
+          <label>Volume</label>
+          <input id="volume" type="range" min="0" max="1" step="0.01" value="0.9" />
+        </div>
+        <div>
+          <label>Sound Source</label>
+          <select id="sound">
+            <option value="beep">Beep</option>
+            <option value="click">Click</option>
+            <option value="clap">Clap</option>
+            <option value="toneHigh">High Tone</option>
+            <option value="toneLow">Low Tone</option>
+            <option value="stereo">Stereo Left/Right</option>
+            <option value="upload">Custom file…</option>
+          </select>
+          <input id="fileInput" type="file" accept="audio/*" class="hidden" />
+        </div>
+        <div>
+          <label>Visual Cues</label>
+          <select id="visual">
+            <option value="color">Screen flash</option>
+            <option value="text">Text (Left/Right)</option>
+            <option value="none">None</option>
+          </select>
+        </div>
+        <div>
+          <label>Phone Vibration</label>
+          <select id="vibrate">
+            <option value="on">On</option>
+            <option value="off">Off</option>
+          </select>
+        </div>
+        <div class="grid-2">
+          <button class="btn secondary" id="savePrefs">💾 Save prefs</button>
+          <button class="btn ghost" id="resetPrefs">↺ Reset defaults</button>
+        </div>
+      </div>
+      <hr style="opacity:.15;margin:14px 0">
+      <div class="grid-3">
+        <div class="stat"><div class="muted">Fastest RT</div><div class="v" id="bestRt">—</div></div>
+        <div class="stat"><div class="muted">Slowest RT</div><div class="v" id="worstRt">—</div></div>
+        <div class="stat"><div class="muted">Today's Avg</div><div class="v" id="todayAvg">—</div></div>
+      </div>
+    </aside>
+
+    <section class="card" style="grid-column:1/-1">
+      <h2>Stats & History</h2>
+      <div class="row" style="justify-content:space-between;gap:8px">
+        <div class="muted">Your results are saved locally on this device only.</div>
+        <div class="row">
+          <button class="btn secondary" id="exportBtn">⬇️ Export JSON</button>
+          <button class="btn ghost" id="clearHistory">🗑️ Clear history</button>
+          <button class="btn secondary" id="shareBtn">🔗 Share result</button>
+        </div>
+      </div>
+      <div id="history" class="row" style="flex-wrap:wrap;margin-top:8px"></div>
+    </section>
+  </main>
+
+  <footer class="muted">v1.0 — Works offline after first load (install as PWA for best experience)</footer>
+
+  <script>
+  // ======== i18n (Arabic / English) ========
+  const I18N = {
+    ar: {
+      brand: 'Reaction Trainer Pro',
+      ready: '— جاهز —', start:'▶️ بدء', pause:'⏸️ إيقاف مؤقت', resume:'▶️ استئناف', stop:'⏹️ إيقاف', react:'⚡ استجابة',
+      theme:'🌗 السِمة', lang:'🌐 اللغة', fullscreen:'⛶ ملء الشاشة',
+      area:'منطقة التمرين', settings:'الإعدادات', stats:'الإحصائيات والسجل',
+      mode:'وضع التدريب', custom:'مخصص', beginner:'مبتدئ (آمن)', intermediate:'متوسط', advanced:'متقدم', endless:'بقاء (غير محدود)', challenge:'تحدي السرعة (1 دقيقة)',
+      duration:'مدة الجلسة (ث)', minDelay:'الحد الأدنى للفاصل (ث)', maxDelay:'الحد الأقصى للفاصل (ث)', ramp:'تدرّج السرعة', none:'بدون', mild:'خفيف', steep:'قوي',
+      volume:'شدة الصوت', sound:'مصدر الصوت', upload:'ملف مخصص…', visual:'إشارات بصرية', color:'تغيير لون الشاشة', text:'نص (يسار/يمين)', vibrate:'اهتزاز الهاتف', on:'تشغيل', off:'إيقاف',
+      save:'💾 حفظ الإعدادات', reset:'↺ استعادة الافتراضي', fastest:'أسرع استجابة', slowest:'أبطأ استجابة', todayAvg:'معدل اليوم',
+      signals:'إشارات', hits:'نجاحات', misses:'أخطاء', avg:'المعدل',
+      export:'⬇️ تصدير JSON', clear:'🗑️ مسح السجل', share:'🔗 مشاركة النتيجة', saved:'✅ تم حفظ الإعدادات', audioLoaded:'تم تحميل الصوت', shareNotSupported:'المتصفح لا يدعم المشاركة', details:'تفاصيل', clearConfirm:'مسح السجل؟'
+    },
+    en: {
+      brand: 'Reaction Trainer Pro',
+      ready: '— Ready —', start:'▶️ Start', pause:'⏸️ Pause', resume:'▶️ Resume', stop:'⏹️ Stop', react:'⚡ React',
+      theme:'🌗 Theme', lang:'🌐 Language', fullscreen:'⛶ Fullscreen',
+      area:'Play Area', settings:'Settings', stats:'Stats & History',
+      mode:'Mode', custom:'Custom', beginner:'Beginner (Safe)', intermediate:'Intermediate', advanced:'Advanced', endless:'Endless', challenge:'Speed Challenge (1m)',
+      duration:'Session Duration (s)', minDelay:'Min Delay (s)', maxDelay:'Max Delay (s)', ramp:'Speed Ramp', none:'None', mild:'Mild', steep:'Steep',
+      volume:'Volume', sound:'Sound', upload:'Custom file…', visual:'Visual Cues', color:'Screen flash', text:'Text (Left/Right)', vibrate:'Phone vibration', on:'On', off:'Off',
+      save:'💾 Save prefs', reset:'↺ Reset defaults', fastest:'Fastest RT', slowest:'Slowest RT', todayAvg:"Today's Avg",
+      signals:'Signals', hits:'Hits', misses:'Misses', avg:'Avg',
+      export:'⬇️ Export JSON', clear:'🗑️ Clear history', share:'🔗 Share', saved:'✅ Preferences saved', audioLoaded:'Audio loaded', shareNotSupported:'Share not supported', details:'Details', clearConfirm:'Clear history?'
+    }
+  }
+  let lang = localStorage.getItem('rtp_lang') || 'en';
+
+  // ======== State ========
+  const state = {
+    running:false, paused:false, endless:false,
+    session:{ start:0, end:0, durationMs:60000 },
+    delay:{ min:500, max:3000, ramp:'none' },
+    sound:'beep', volume:0.9, visual:'color', vibrate:true,
+    signals:0, hits:0, misses:0, rts:[], lastCueAt:0, lastCueDir:null,
+    fileUrl:null, stereoToggle:false,
+  };
+
+  // ======== Elements ========
+  const $ = s=>document.querySelector(s);
+  const playfield = $('#playfield');
+  const cueLabel = $('#cueLabel');
+  const timeLeft = $('#timeLeft');
+  const sessionProgress = $('#sessionProgress');
+  const startBtn = $('#startBtn');
+  const pauseBtn = $('#pauseBtn');
+  const stopBtn = $('#stopBtn');
+  const reactBtn = $('#reactBtn');
+  const signalsCount = $('#signalsCount');
+  const hitsCount = $('#hitsCount');
+  const missCount = $('#missCount');
+  const avgRt = $('#avgRt');
+  const bestRt = $('#bestRt');
+  const worstRt = $('#worstRt');
+  const todayAvg = $('#todayAvg');
+  const historyEl = $('#history');
+
+  // Settings inputs
+  const mode = $('#mode');
+  const duration = $('#duration');
+  const minDelay = $('#minDelay');
+  const maxDelay = $('#maxDelay');
+  const ramp = $('#ramp');
+  const volume = $('#volume');
+  const sound = $('#sound');
+  const fileInput = $('#fileInput');
+  const visual = $('#visual');
+  const vibrateSel = $('#vibrate');
+
+  // Header buttons
+  const themeBtn = $('#themeBtn');
+  const langBtn = $('#langBtn');
+  const fsBtn = $('#fsBtn');
+
+  // ======== Audio (WebAudio) ========
+  const AudioCtx = window.AudioContext || window.webkitAudioContext;
+  const audio = new AudioCtx();
+  let gain = audio.createGain();
+  gain.gain.value = state.volume; gain.connect(audio.destination);
+
+  function playTone(freq=880, timeMs=120, panner){
+    const osc = audio.createOscillator();
+    osc.type = 'sine';
+    osc.frequency.value = freq;
+    const g = audio.createGain();
+    g.gain.value = 0.0001; // avoid click
+    g.connect(panner ? panner : gain);
+    osc.connect(g);
+    osc.start();
+    g.gain.exponentialRampToValueAtTime(state.volume, audio.currentTime + 0.01);
+    g.gain.exponentialRampToValueAtTime(0.0001, audio.currentTime + timeMs/1000);
+    osc.stop(audio.currentTime + timeMs/1000 + 0.02);
+  }
+
+  function playClick(){ playTone(2200, 60); }
+  function playBeep(){ playTone(880, 120); }
+  function playClap(){
+    // noise burst
+    const bufSize = audio.sampleRate * 0.12;
+    const buffer = audio.createBuffer(1, bufSize, audio.sampleRate);
+    const data = buffer.getChannelData(0);
+    for(let i=0;i<bufSize;i++){ data[i] = (Math.random()*2-1) * Math.pow(1 - i/bufSize, 3); }
+    const noise = audio.createBufferSource(); noise.buffer = buffer;
+    const g = audio.createGain(); g.gain.value = state.volume;
+    noise.connect(g); g.connect(gain); noise.start();
+  }
+  function playStereo(){
+    const panner = new StereoPannerNode(audio, { pan: state.stereoToggle ? -1 : 1 });
+    panner.connect(gain);
+    playTone(990, 140, panner);
+    state.stereoToggle = !state.stereoToggle;
+  }
+  let fileBuffer = null;
+  async function playFile(){
+    if(!fileBuffer) return playBeep();
+    const src = audio.createBufferSource();
+    src.buffer = fileBuffer; const g = audio.createGain(); g.gain.value = state.volume; src.connect(g); g.connect(gain); src.start();
+  }
+
+  function playSelected(){
+    switch(state.sound){
+      case 'beep': return playBeep();
+      case 'click': return playClick();
+      case 'clap': return playClap();
+      case 'toneHigh': return playTone(1400, 120);
+      case 'toneLow': return playTone(440, 120);
+      case 'stereo': return playStereo();
+      case 'upload': return playFile();
+    }
+  }
+
+  // ======== Visual cue ========
+  function showCue(){
+    if(state.visual === 'color'){
+      playfield.classList.add('flash');
+      setTimeout(()=>playfield.classList.remove('flash'), 90);
+      cueLabel.textContent = '⏺️';
+    } else if(state.visual === 'text'){
+      const dir = Math.random() < 0.5 ? 'Left' : 'Right';
+      state.lastCueDir = dir;
+      cueLabel.textContent = dir;
+      // small bounce
+      cueLabel.style.transform = 'scale(1.15)';
+      setTimeout(()=>cueLabel.style.transform='scale(1)',120);
+    } else {
+      cueLabel.textContent = I18N[lang].ready;
+    }
+  }
+
+  // ======== Session engine ========
+  let tickTimer = null, cueTimer = null;
+  function formatTime(ms){
+    const s = Math.max(0, Math.ceil(ms/100)/10); // 0.1s
+    const m = Math.floor(s/60), r=(s%60).toFixed(1).padStart(4,'0');
+    return (m>0? String(m).padStart(2,'0')+':':'') + (m>0? String(Math.floor(r)).padStart(2,'0') : String(r));
+  }
+
+  function applyMode(){
+    const m = mode.value;
+    if(m==='beginner'){ duration.value=60; minDelay.value=0.8; maxDelay.value=3.5; ramp.value='none'; }
+    else if(m==='intermediate'){ duration.value=90; minDelay.value=0.6; maxDelay.value=3; ramp.value='mild'; }
+    else if(m==='advanced'){ duration.value=120; minDelay.value=0.4; maxDelay.value=2.2; ramp.value='steep'; }
+    else if(m==='endless'){ duration.value=36000; ramp.value='mild'; }
+    else if(m==='challenge'){ duration.value=60; ramp.value='steep'; }
+  }
+
+  function readSettings(){
+    state.session.durationMs = Math.max(5000, Number(duration.value)*1000);
+    state.delay.min = Math.max(200, Math.min(Number(minDelay.value)*1000, state.delay.max||9999999));
+    state.delay.max = Math.max(state.delay.min+50, Number(maxDelay.value)*1000);
+    state.delay.ramp = ramp.value;
+    state.sound = sound.value;
+    state.visual = visual.value;
+    state.vibrate = (vibrateSel.value==='on');
+    state.endless = (mode.value==='endless');
+    gain.gain.value = state.volume = Number(volume.value);
+  }
+
+  function savePrefs(){
+    const prefs = {lang, theme:document.documentElement.dataset.theme||'dark',
+      mode:mode.value, duration:duration.value, minDelay:minDelay.value,maxDelay:maxDelay.value,ramp:ramp.value,
+      volume:volume.value, sound:sound.value, visual:visual.value, vibrate:vibrateSel.value };
+    localStorage.setItem('rtp_prefs', JSON.stringify(prefs));
+    toast(I18N[lang].saved);
+  }
+  function loadPrefs(){
+    const p = JSON.parse(localStorage.getItem('rtp_prefs')||'null');
+    if(!p) return;
+    mode.value=p.mode; duration.value=p.duration; minDelay.value=p.minDelay; maxDelay.value=p.maxDelay; ramp.value=p.ramp;
+    volume.value=p.volume; sound.value=p.sound; visual.value=p.visual; vibrateSel.value=p.vibrate;
+    if(p.theme) document.documentElement.dataset.theme = p.theme;
+  }
+
+  function start(){
+    if(state.running) return;
+    readSettings();
+    state.running = true; state.paused=false;
+    state.signals = state.hits = state.misses = 0; state.rts = []; state.lastCueAt = 0; state.lastCueDir=null;
+    state.session.start = Date.now(); state.session.end = state.session.start + state.session.durationMs;
+    timeLeft.textContent = formatTime(state.session.durationMs);
+    sessionProgress.value = 0;
+    startBtn.disabled=true; pauseBtn.disabled=false; stopBtn.disabled=false;
+    tickTimer = setInterval(tick, 100);
+    scheduleCue(true);
+  }
+  function pause(){
+    if(!state.running) return;
+    state.paused = !state.paused;
+    if(state.paused){
+      clearInterval(tickTimer); clearTimeout(cueTimer);
+      pauseBtn.textContent = I18N[lang].resume;
+    } else {
+      // adjust end time
+      const remaining = Math.max(0, state.session.end - Date.now());
+      state.session.end = Date.now() + remaining;
+      tickTimer = setInterval(tick, 100);
+      scheduleCue(true);
+      pauseBtn.textContent = I18N[lang].pause;
+    }
+  }
+  function stop(save=true){
+    clearInterval(tickTimer); clearTimeout(cueTimer);
+    startBtn.disabled=false; pauseBtn.disabled=true; stopBtn.disabled=true; pauseBtn.textContent=I18N[lang].pause;
+    state.running=false; state.paused=false; cueLabel.textContent = I18N[lang].ready;
+    if(save) recordSession();
+  }
+
+  function tick(){
+    const now = Date.now();
+    const remaining = state.session.end - now;
+    if(remaining <= 0 && !state.endless){
+      timeLeft.textContent = '00:00'; sessionProgress.value=1; stop(true); return;
+    }
+    timeLeft.textContent = state.endless ? '∞' : formatTime(remaining);
+    const elapsed = now - state.session.start;
+    sessionProgress.value = Math.min(1, elapsed / state.session.durationMs);
+  }
+
+  function scheduleCue(first=false){
+    const now = Date.now();
+    if(!state.endless && now >= state.session.end) return;
+    // compute delay (random each time)
+    let min = state.delay.min, max = state.delay.max;
+    if(state.delay.ramp!=='none'){
+      const progress = Math.min(1, (now - state.session.start) / state.session.durationMs);
+      const factor = state.delay.ramp==='mild' ? (1 - 0.5*progress) : (1 - 0.75*progress);
+      min = Math.max(150, min * factor); max = Math.max(min+50, max * factor);
+    }
+    const delay = Math.random() * (max - min) + min;
+    cueTimer = setTimeout(()=>{
+      state.lastCueAt = performance.now();
+      state.signals++; signalsCount.textContent = state.signals;
+      if(state.vibrate && navigator.vibrate) navigator.vibrate(20);
+      playSelected(); showCue();
+      // mark a miss if no response within 1200ms
+      const windowMs = 1200;
+      setTimeout(()=>{
+        if(state.lastCueAt){ // still pending => miss
+          state.misses++; missCount.textContent = state.misses;
+          state.lastCueAt = 0;
+        }
+      }, windowMs+20);
+      scheduleCue();
+    }, first? 400 : delay);
+  }
+
+  function react(){
+    if(!state.lastCueAt) return; // nothing to react to
+    const rt = Math.round(performance.now() - state.lastCueAt);
+    state.rts.push(rt);
+    state.hits++; hitsCount.textContent = state.hits;
+    avgRt.textContent = Math.round(state.rts.reduce((a,b)=>a+b,0)/state.rts.length);
+    state.lastCueAt = 0; // consume
+    cueLabel.textContent = `RT: ${rt} ms`;
+    cueLabel.style.color = 'var(--ok)';
+    setTimeout(()=>{ cueLabel.style.color='var(--fg)'; cueLabel.textContent=I18N[lang].ready; }, 600);
+  }
+
+  // ======== History & stats ========
+  function recordSession(){
+    const item = {
+      t: Date.now(), duration: state.session.durationMs, mode: mode.value,
+      min: state.delay.min, max: state.delay.max, ramp: state.delay.ramp,
+      sound: state.sound, visual: state.visual,
+      signals: state.signals, hits: state.hits, misses: state.misses, rts: state.rts
+    };
+    const arr = JSON.parse(localStorage.getItem('rtp_history')||'[]');
+    arr.unshift(item); // latest first
+    localStorage.setItem('rtp_history', JSON.stringify(arr.slice(0, 200)));
+    refreshHistory(); refreshSummary();
+  }
+
+  function refreshSummary(){
+    const arr = JSON.parse(localStorage.getItem('rtp_history')||'[]');
+    if(arr.length===0){ bestRt.textContent = worstRt.textContent = todayAvg.textContent = '—'; return; }
+    let best=Infinity, worst=0, today=[];
+    const todayStr = new Date().toDateString();
+    for(const s of arr){
+      for(const r of (s.rts||[])){
+        if(r<best) best=r; if(r>worst) worst=r;
+      }
+      if(new Date(s.t).toDateString()===todayStr && s.rts && s.rts.length) today.push(...s.rts);
+    }
+    bestRt.textContent = isFinite(best)? best+' ms' : '—';
+    worstRt.textContent = worst? (worst+' ms') : '—';
+    todayAvg.textContent = today.length? (Math.round(today.reduce((a,b)=>a+b,0)/today.length)+' ms') : '—';
+  }
+
+  function fmtDate(ts){
+    const d = new Date(ts);
+    return d.toLocaleString(lang==='ar'? 'ar' : 'en', {hour12:false});
+  }
+  function chip(text){
+    const span = document.createElement('span'); span.className='pill'; span.textContent=text; return span;
+  }
+  function refreshHistory(){
+    historyEl.innerHTML = '';
+    const arr = JSON.parse(localStorage.getItem('rtp_history')||'[]');
+    arr.forEach((s, idx)=>{
+      const card = document.createElement('div'); card.className='stat'; card.style.minWidth='260px'; card.style.maxWidth='320px';
+      const title = document.createElement('div'); title.style.fontWeight='800'; title.textContent = fmtDate(s.t);
+      const row = document.createElement('div'); row.className='row'; row.style.marginTop='8px';
+      row.append(
+        chip((lang==='ar'?'المدة: ':'Dur: ')+ Math.round(s.duration/1000)+'s'),
+        chip('⚡ '+(s.rts?.length||0)+' RTs'),
+        chip((lang==='ar'?'نجاح: ':'Hits: ')+s.hits),
+        chip((lang==='ar'?'خطأ: ':'Miss: ')+s.misses),
+      );
+      const btn = document.createElement('button'); btn.className='btn ghost'; btn.style.marginTop='8px'; btn.textContent = lang==='ar'? 'تفاصيل' : 'Details';
+      btn.onclick=()=>alert(JSON.stringify(s, null, 2));
+      card.append(title,row,btn); historyEl.append(card);
+    })
+  }
+
+  // ======== Share / Export ========
+  $('#exportBtn').onclick = ()=>{
+    const data = localStorage.getItem('rtp_history')||'[]';
+    const blob = new Blob([data], {type:'application/json'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href=url; a.download='rtp-history.json'; a.click(); URL.revokeObjectURL(url);
+  };
+  $('#clearHistory').onclick = ()=>{ if(confirm(I18N[lang].clearConfirm)){ localStorage.removeItem('rtp_history'); refreshHistory(); refreshSummary(); } };
+  $('#shareBtn').onclick = async ()=>{
+    const last = JSON.parse(localStorage.getItem('rtp_history')||'[]')[0];
+    if(navigator.share && last){
+      await navigator.share({title:'Reaction Trainer', text:`Mode ${last.mode}\nHits ${last.hits}\nAvg ${Math.round((last.rts||[]).reduce((a,b)=>a+b,0)/Math.max(1,(last.rts||[]).length))} ms`});
+    } else { toast(I18N[lang].shareNotSupported); }
+  };
+
+  // ======== Toaster ========
+  let toastT=null; function toast(msg){
+    let t = document.getElementById('toast');
+    if(!t){ t=document.createElement('div'); t.id='toast'; document.body.appendChild(t); t.style.cssText='position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#000000cc;color:#fff;padding:10px 14px;border-radius:12px;z-index:1000;box-shadow:0 10px 20px #00000060'; }
+    t.textContent = msg; t.style.opacity='1'; clearTimeout(toastT); toastT=setTimeout(()=>t.style.opacity='0', 1600);
+  }
+
+  // ======== UI bindings ========
+  startBtn.onclick = start;
+  pauseBtn.onclick = pause;
+  stopBtn.onclick = ()=>stop(true);
+  reactBtn.onclick = react;
+  document.addEventListener('keydown', e=>{ if(e.code==='Space'){ e.preventDefault(); react(); }});
+
+  mode.onchange = ()=>{ applyMode(); readSettings(); savePrefs(); };
+  [duration,minDelay,maxDelay,ramp,volume,sound,visual,vibrateSel].forEach(el=> el.onchange=()=>{ readSettings(); savePrefs(); });
+
+  sound.onchange = ()=>{ if(sound.value==='upload'){ fileInput.click(); } };
+  fileInput.onchange = async (e)=>{
+    const f = e.target.files?.[0]; if(!f) return;
+    const ab = await f.arrayBuffer(); fileBuffer = await audio.decodeAudioData(ab); state.sound='upload'; toast(I18N[lang].audioLoaded);
+  };
+
+  $('#savePrefs').onclick = savePrefs;
+  $('#resetPrefs').onclick = ()=>{ localStorage.removeItem('rtp_prefs'); location.reload(); };
+
+  // Header actions
+  themeBtn.onclick = ()=>{
+    const cur = document.documentElement.dataset.theme||'dark';
+    document.documentElement.dataset.theme = cur==='dark'? 'light':'dark';
+    savePrefs();
+  };
+  langBtn.onclick = ()=>{
+    lang = (lang==='ar'? 'en':'ar'); localStorage.setItem('rtp_lang', lang); applyLang(); refreshHistory(); refreshSummary(); savePrefs();
+  };
+  fsBtn.onclick = ()=>{ const el = document.documentElement; if(!document.fullscreenElement){ el.requestFullscreen?.(); } else { document.exitFullscreen?.(); } };
+
+  function applyLang(){
+    document.documentElement.lang = (lang==='ar'?'ar':'en');
+    document.documentElement.dir = (lang==='ar'?'rtl':'ltr');
+    // Minimal labels update (buttons)
+    startBtn.textContent = I18N[lang].start; pauseBtn.textContent = I18N[lang].pause; stopBtn.textContent = I18N[lang].stop; reactBtn.textContent=I18N[lang].react;
+    themeBtn.textContent = I18N[lang].theme; langBtn.textContent = I18N[lang].lang; fsBtn.textContent = I18N[lang].fullscreen;
+    cueLabel.textContent = I18N[lang].ready;
+  }
+
+  // ======== Init ========
+  loadPrefs(); applyMode(); readSettings(); applyLang(); refreshHistory(); refreshSummary();
+
+  // ======== PWA (service worker + offline cache) ========
+  // Requires a separate file in practice. We output code here for convenience.
+  if('serviceWorker' in navigator){
+    // Attempt to register if file exists at same path
+    navigator.serviceWorker.register('./service-worker.js').catch(()=>{/* ignore if missing */});
+  }
+
+  </script>
+
+  <!-- ======== Service Worker (save as service-worker.js next to this file) ========
+  // Paste the following into service-worker.js to enable offline caching
+  const CACHE_NAME = 'rtp-cache-v1';
+  const ASSETS = ['./','./index.html'];
+  self.addEventListener('install', e=>{ e.waitUntil(caches.open(CACHE_NAME).then(c=>c.addAll(ASSETS)).then(()=>self.skipWaiting())); });
+  self.addEventListener('activate', e=>{ e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE_NAME).map(k=>caches.delete(k)))).then(()=>self.clients.claim())); });
+  self.addEventListener('fetch', e=>{ e.respondWith(caches.match(e.request).then(r=> r || fetch(e.request).then(resp=>{ const copy = resp.clone(); caches.open(CACHE_NAME).then(c=>c.put(e.request, copy)); return resp; }))); });
+  -->
+
+  <!-- ======== Web App Manifest (optional): save as manifest.webmanifest ========
+  {
+    "name":"Reaction Trainer Pro",
+    "short_name":"RTP",
+    "start_url":"./index.html",
+    "display":"standalone",
+    "background_color":"#0b0b0b",
+    "theme_color":"#0b0b0b",
+    "icons":[]
+  }
+  -->
+</body>
+</html>
